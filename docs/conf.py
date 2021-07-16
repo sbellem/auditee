@@ -24,6 +24,8 @@ extensions = [
     "sphinx_togglebutton",
 ]
 
+intersphinx_mapping = {"https://docs.python.org/": None}
+
 # autodoc_default_options = {
 #    "members": None,
 #    "undoc-members": None,

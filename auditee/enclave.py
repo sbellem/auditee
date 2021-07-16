@@ -23,7 +23,7 @@ ReproducibilityReport = namedtuple(
 ReportItem = namedtuple("ReportItem", ("matches", "expected", "computed"))
 
 
-def build_enclave(source_code, *, docker_build_progress=False):
+def build(source_code, *, docker_build_progress=False):
     """Build an enclave binary for the given source code.
 
     The source code is expected to contain a file :file:`.auditee.yml`,
@@ -78,14 +78,41 @@ def build_enclave(source_code, *, docker_build_progress=False):
     )
 
 
-def sign_enclave(
+def sign(
     unsigned_enclave,
     enclave_config,
     *,
     signed_enclave="/tmp/enclave.signed.so",
     signing_key=None,
 ):
-    """ """
+    """Sign the given enclave.
+
+    Parameters
+    ----------
+    unsigned_enclave: str
+        Local file path to the unsigned enclave binary.
+    enclave_config: str
+        Local file path to the enclave configuration file.
+    signed_enclave: str, optional
+        Local file path where the signed enclave should be written to.
+        Defaults to :file:`/tmp/enclave.signed.so`.
+    signing_key: str, optional
+        Local file path to a signing key with which to sign the enclave.
+        When signing an enclave just for test purposes, such as
+        verifying the reproducibility of an enclave, one can fall back
+        on the default which is a key file that is packaged with
+        ``auditee``.
+
+    Raises
+    ------
+    :py:exc:`~.errors.SGXSignError`:
+        If something wrong happen when invoking the ``sgx_sign`` tool.
+
+    Returns
+    -------
+    str:
+        File path where the signed enclave was written to.
+    """
     if signing_key is None:
         signing_key = (
             pathlib.Path(__file__).parent.resolve().joinpath("signing_key.pem")
@@ -108,6 +135,31 @@ def extract_sigstruct(signed_enclave):
 
 
 def verify_ias_report(report, signed_enclave):
+    """Verify whether the ``MRENCLAVE`` in the given IAS report matches
+    against the MRENCLAVE of the given signed enclave.
+
+    Parameters
+    ----------
+    report: str
+        Local file path to the IAS report, in json format.
+    signed_enclave: str
+        Path to the signed enclave file.
+
+    Returns
+    -------
+    bool:
+        ``True`` if the MRENCLAVEs match, ``False`` otherwise.
+
+    Examples
+    --------
+    >>> from auditee.enclave import verify_ias_report
+    >>> verify_ias_report('ias_report.json', 'enclave.signed.so')
+    Succeed.
+    - Provided enclave MRENCLAVE:           b7af1907e21b4eb240d3c3c6880e3892e45af383196d7aa326c35e2a8c71ef63
+    - IAS report MRENCLAVE:                 b7af1907e21b4eb240d3c3c6880e3892e45af383196d7aa326c35e2a8c71ef63
+    MRENCLAVES match!
+    True
+    """
     sigstruct = Sigstruct.from_enclave_file(signed_enclave)
     return _verify_ias_report(report, sigstruct)
 
@@ -164,17 +216,61 @@ def verify_mrenclave(
     signed_enclave,
     *,
     ias_report=None,
-    docker_build_progress=False,
     signing_key=None,
+    docker_build_progress=False,
 ):
-    """Given some source code, a signed enclave, and optionally, a remote attestation
-    verification report from Intel's attestation service (IAS), verify whether
-    the signed enclave binary can be reproduced from the given source code, and
-    whether the IAS report corresponds to the given signed enclave.
+    """Given some source code, a signed enclave, and optionally, a
+    remote attestation verification report from Intel's attestation
+    service (IAS), verify whether the signed enclave binary can be
+    reproduced from the given source code, and whether the IAS report
+    corresponds to the given signed enclave.
+
+    Parameters
+    ----------
+    source_code: str
+        Local file path to the source code where the enclave to be built
+        is located.
+    signed_enclave: str
+        Path to the signed enclave file.
+    ias_report: str, optional
+        Local file path to the IAS report, in json format.
+    signing_key: str, optional
+        Local file path to a signing key with which to sign the enclave.
+        When signing an enclave just for test purposes, such as
+        verifying the reproducibility of an enclave, one can fall back
+        on the default which is a key file that is packaged with
+        ``auditee``.
+
+    Raises
+    ------
+    :py:exc:`~.errors.SGXSignError`:
+        If something wrong happen when invoking the ``sgx_sign`` tool.
+
+    Returns
+    -------
+    bool:
+        ``True`` if the MRENCLAVEs match, ``False`` otherwise.
+
+    Examples
+    --------
+    >>> from auditee.enclave import verify_mrenclave
+    >>> verify_mrenclave('sgx-iot/', 'enclave.signed.so', ias_report='ias_report.json')
+    # ...
+    Reproducibility Report
+    ----------------------
+    - Signed enclave MRENCLAVE:                     b7af1907e21b4eb240d3c3c6880e3892e45af383196d7aa326c35e2a8c71ef63
+    - Built-from-source enclave MRENCLAVE:          b7af1907e21b4eb240d3c3c6880e3892e45af383196d7aa326c35e2a8c71ef63
+    - IAS report MRENCLAVE:                         b7af1907e21b4eb240d3c3c6880e3892e45af383196d7aa326c35e2a8c71ef63
+    # ...
+    MRENCLAVES match!
+    # ...
+    Report data
+    -----------
+    The following REPORT DATA contained in the remote attestation verification report CAN be trusted.
+    6e979bd31dd119faf99a423e97563e67dc7937944347c8a98f59977b76dd55cd911a8be4420bec78116e4e51f47def30c72c631556e960378e39e3aab7ccbe08
+    >>> True
     """
-    unsigned_enclave = build_enclave(
-        source_code, docker_build_progress=docker_build_progress
-    )
+    unsigned_enclave = build(source_code, docker_build_progress=docker_build_progress)
 
     source_code = pathlib.Path(source_code).resolve()
     auditee_file = source_code.joinpath(".auditee.yml")
@@ -187,7 +283,7 @@ def verify_mrenclave(
     # Get absolute path of enclave config
     enclave_config = source_code.joinpath(enclave_build_config["enclave_config"])
 
-    rebuilt_signed_enclave = sign_enclave(
+    rebuilt_signed_enclave = sign(
         unsigned_enclave, enclave_config, signing_key=signing_key
     )
 

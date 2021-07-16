@@ -5,16 +5,21 @@ Tool Reference
 
 ``auditee.tool``
 ----------------
-.. automodule:: auditee.auditee
-    :members:
+.. automodule:: auditee.enclave
 
-.. autofunction:: build_enclave
-.. autofunction:: sign_enclave
-.. autofunction:: extract_sigstruct
+.. autofunction:: build
+.. autofunction:: sign
 .. autofunction:: verify_ias_report
 .. autofunction:: verify_mrenclave
 
 ``auditee.sgx``
 ---------------
 .. automodule:: auditee.sgx
+    :members: SGX_SDK, SGX_SIGN_CMD
+
+.. autofunction:: sign
+
+``auditee.errors``
+------------------
+.. automodule:: auditee.errors
     :members:
