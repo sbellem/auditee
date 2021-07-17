@@ -38,6 +38,7 @@ See the examples documented under :ref:`sgx-hashmachine` and :ref:`sgx-iot-gatew
     config
     tool
     background
+    relatedwork
     refs
     ack
 

@@ -6,6 +6,59 @@ Some brief notes and pointers about TEEs and Intel SGX, mostly based on
 `Intel SGX Explained`_ by Victor Costan and Srinivas Devadas
 :cite:`cryptoeprint:2016:086`.
 
+Here's an overview of SGX, directly taken from from `Intel SGX Explained`_
+:cite:`cryptoeprint:2016:086`:
+
+    Secure remote computation (Figure 1) is the problem of executing software
+    on a remote computer owned and maintained by an untrusted party, with some
+    integrity and confidentiality guarantees. In the general setting, secure
+    remote computation is an unsolved problem. Fully Homomorphic Encryption
+    :cite:`fhe` solves the problem for a limited family of computations, but
+    has an impractical performance overhead :cite:`10.1145/2046660.2046682`.
+
+    Intel’s Software Guard Extensions (SGX) is the latest iteration in a long
+    line of trusted computing (Figure 2) designs, which aim to solve the
+    secure remote computation problem by leveraging trusted hardware in the
+    remote computer. The trusted hardware establishes a secure container, and
+    the remote computation service user uploads the desired computation and
+    data into the secure container. The trusted hardware protects the data’s
+    confidentiality and integrity while the computation is being performed on
+    it.
+
+    SGX relies on software attestation, like its predecessors, the TPM [71]
+    and TXT [70]. Attestation (Figure 3) proves to a user that she is
+    communicating with a specific piece of software running in a secure
+    container hosted by the trusted hardware. The proof is a cryptographic
+    signature that certifies the hash of the secure container's contents. It
+    follows that the remote computer's owner can load any software in a secure
+    container, but the remote computation service user will refuse to load her
+    data into a secure container whose contents' hash does not match the
+    expected value.
+
+    The remote computation service user verifies the attestation key used to
+    produce the signature against an endorsement certificate created by the
+    trusted hardware's manufacturer. The certificate states that the
+    attestation key is only known to the trusted hardware, and only used for
+    the purpose of attestation.
+
+    SGX stands out from its predecessors by the amount of code covered by the
+    attestation, which is in the Trusted Computing Base (TCB) for the system
+    using hardware protection. The attestations produced by the original TPM
+    design covered all the software running on a computer, and TXT
+    attestations covered the code inside a VMX [181] virtual machine. In SGX,
+    an enclave (secure container) only contains the private data in a
+    computation, and the code that operates on it.
+
+    An SGX-enabled processor protects the integrity and confidentiality of the
+    computation inside an enclave by isolating the enclave's code and data
+    from the outside environment, including the operating system and
+    hypervisor, and hardware devices attached to the system bus. At the same
+    time, the SGX model remains compatible with the traditional software
+    layering in the Intel architecture, where the OS kernel and hypervisor
+    manage the computer's resources.
+
+    -- Intel SGX Explained :cite:`cryptoeprint:2016:086`
+
 The goal of a Trusted Execution Environment is to have, at the chip or hardware level,
 a secure container in which some code can be executed such that the surrounding
 environment such as the operating system cannot tamper with the code and its execution.
